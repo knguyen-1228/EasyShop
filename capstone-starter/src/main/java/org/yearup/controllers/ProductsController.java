@@ -24,7 +24,7 @@ public class ProductsController
         this.productDao = productDao;
     }
 
-    @GetMapping("")
+    @GetMapping
     @PreAuthorize("permitAll()")
     public List<Product> search(@RequestParam(name="cat", required = false) Integer categoryId,
                                 @RequestParam(name="minPrice", required = false) BigDecimal minPrice,
@@ -35,6 +35,20 @@ public class ProductsController
         try
         {
             return productDao.search(categoryId, minPrice, maxPrice, color);
+        }
+        catch(Exception ex)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
+
+    @GetMapping("/category/{id}")
+    @PreAuthorize("permitAll()")
+    public List<Product> listByCategoryId(@PathVariable int id)
+    {
+        try
+        {
+            return productDao.listByCategoryId(id);
         }
         catch(Exception ex)
         {
@@ -81,7 +95,7 @@ public class ProductsController
     {
         try
         {
-            productDao.create(product);
+            productDao.update(id, product);
         }
         catch(Exception ex)
         {
