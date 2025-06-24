@@ -1,6 +1,8 @@
 package org.yearup.data.mysql;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.yearup.data.ProductDao;
 import org.yearup.data.ShoppingCartDao;
 import org.yearup.models.Product;
 import org.yearup.models.ShoppingCart;
@@ -14,73 +16,130 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class MySqlCartDAO extends MySqlDaoBase implements ShoppingCartDao {
-    public MySqlCartDAO(DataSource dataSource) {
+
+    private ProductDao productDao;
+
+    @Autowired
+    public MySqlCartDAO(DataSource dataSource, ProductDao productDao) {
         super(dataSource);
+        this.productDao = productDao;
     }
 
     @Override
     public ShoppingCart getByUserId(int userId) {
-        return null;
-    }
-
-    /*@Override
-    public ShoppingCart getByUserId(int userId) {
         String sql = """
                 SELECT 
-                    sc.product_id,
-                    sc.quantity,
-                    p.name,
-                    p.description,
-                    p.category_id,
-                    p.price,
-                    p.color,
-                    p.featured
+                    *
                 FROM
-                    shopping_cart sc
-                JOIN
-                    products p
-                ON
-                    sc.product_id = p.product_id
+                    shopping_cart
                 WHERE
-                    sc.user_id = ?
+                    user_id = ?
                 """;
+        ShoppingCart cart = new ShoppingCart();
+        BigDecimal total = BigDecimal.ZERO;
+        Map<Integer, ShoppingCartItem> items = new HashMap<>();
 
-        List<ShoppingCartItem> cartItems = new ArrayList<>();
-
-        try (Connection connection = getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
+        try(Connection connection = getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql)){
 
             statement.setInt(1, userId);
-            ResultSet resultSet = statement.executeQuery();
+            ResultSet result =  statement.executeQuery();
 
-            while(resultSet.next()){
-                Product product = new Product();
-                product.setProductId(resultSet.getInt("product_id"));
-                product.setName(resultSet.getString("name"));
-                product.setDescription(resultSet.getString("description"));
-                product.setCategoryId(resultSet.getInt("category_id"));
-                product.setPrice(resultSet.getBigDecimal("price"));
-                product.setColor(resultSet.getString("color"));
-                product.setFeatured(resultSet.getBoolean("featured"));
+            while(result.next()){
+                int productId = result.getInt("product_id");
+                int quantity = result.getInt("quantity");
 
-                ShoppingCartItem item = new ShoppingCartItem();
-                item.setProduct(product);
-                item.setQuantity(resultSet.getInt("quantity"));
-                item.setDiscountPercent(BigDecimal.ZERO);
+                Product product = productDao.getById(productId);
+                if(product != null){
+                    ShoppingCartItem item = new ShoppingCartItem();
+                    item.setProduct(product);
+                    item.setQuantity(quantity);
+                    item.setDiscountPercent(BigDecimal.ZERO);
 
-                cartItems.add(item);
+                    /*BigDecimal linetotal = item.getLineTotal();
+                    total = total.add(linetotal);*/
+
+                    items.put(productId, item);
+
+                }
             }
+            /*cart.getTotal();*/
+
 
         }catch (SQLException e)
         {
             throw new RuntimeException(e);
         }
-        return cartItems;
-    }*/
+        cart.setItems(items);
+        return cart;
+    }
 
+    @Override
+    public void addProduct(int userId, int productId) {
+        String sql = """
+                INSERT INTO shopping_cart (user_id, product_id, quantity)
+                VALUES (?,?,1)
+                ON DUPLICATE KEY 
+                UPDATE quantity = quantity + 1
+                """;
+
+        try(Connection connection = getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql)){
+            statement.setInt(1,userId);
+            statement.setInt(2,productId);
+            statement.executeUpdate();
+
+        }catch (SQLException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void updateCart(int userId, int productId, ShoppingCartItem shoppingCartItem) {
+        String sql = """
+                UPDATE shopping_cart 
+                SET quantity = ?
+                WHERE 
+                    user_id = ?,
+                    product_id = ?
+                """;
+
+        try(Connection connection = getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql)){
+            statement.setInt(1,shoppingCartItem.getQuantity());
+            statement.setInt(2,userId);
+            statement.setInt(3,productId);
+
+        }catch (SQLException e)
+        {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    @Override
+    public void deleteCart(int userId) {
+        String sql = """
+                DELETE FROM shopping_cart
+                WHERE user_id = ?
+                """;
+
+        try(Connection connection = getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql)){
+
+            statement.setInt(1,userId);
+            statement.executeUpdate();
+        }catch (SQLException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
 
 }
