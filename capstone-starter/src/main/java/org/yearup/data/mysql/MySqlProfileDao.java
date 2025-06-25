@@ -44,4 +44,51 @@ public class MySqlProfileDao extends MySqlDaoBase implements ProfileDao
         }
     }
 
+    @Override
+    public Profile getById(int userId) {
+        String sql = """
+                SELECT
+                    *
+                FROM
+                    profiles
+                WHERE
+                    user_id = ?
+                """;
+
+        try(Connection connection = getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql)){
+
+            statement.setInt(1, userId);
+
+            ResultSet result = statement.executeQuery();
+
+            if(result.next()){
+                Profile profile = new Profile();
+                profile.setUserId(result.getInt("user_id"));
+                profile.setFirstName(result.getString("first_name"));
+                profile.setLastName(result.getString("last_name"));
+                profile.setPhone(result.getString("phone"));
+                profile.setEmail(result.getString("email"));
+                profile.setAddress(result.getString("address"));
+                profile.setCity(result.getString("city"));
+                profile.setState(result.getString("state"));
+                profile.setZip(result.getString("zip"));
+
+                return profile;
+
+            }
+
+        }catch (SQLException e)
+        {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+
+    @Override
+    public void update(int userId) {
+        
+
+    }
+
 }
