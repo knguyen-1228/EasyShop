@@ -42,7 +42,6 @@ public class MySqlCartDAO extends MySqlDaoBase implements ShoppingCartDao {
                     user_id = ?
                 """;
         ShoppingCart cart = new ShoppingCart();
-        BigDecimal total = BigDecimal.ZERO;
         Map<Integer, ShoppingCartItem> items = new HashMap<>();
 
         try(Connection connection = getConnection();
@@ -62,14 +61,13 @@ public class MySqlCartDAO extends MySqlDaoBase implements ShoppingCartDao {
                     item.setQuantity(quantity);
                     item.setDiscountPercent(BigDecimal.ZERO);
 
-                    /*BigDecimal linetotal = item.getLineTotal();
-                    total = total.add(linetotal);*/
+
 
                     items.put(productId, item);
 
                 }
             }
-            /*cart.getTotal();*/
+
 
 
         }catch (SQLException e)
